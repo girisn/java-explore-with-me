@@ -31,8 +31,8 @@ public class StatController {
 
     @GetMapping("/stats")
     public Collection<ViewStatsDto> getViewStats(
-            @RequestParam(value = "start") @DateTimeFormat(pattern = DATE_TIME_PATTERN) LocalDateTime start,
-            @RequestParam(value = "end") @DateTimeFormat(pattern = DATE_TIME_PATTERN) LocalDateTime end,
+            @RequestParam(value = "start") LocalDateTime start,
+            @RequestParam(value = "end") LocalDateTime end,
             @RequestParam(value = "uris", defaultValue = "") List<String> uris,
             @RequestParam(value = "unique", defaultValue = "false") Boolean unique
     ) {
