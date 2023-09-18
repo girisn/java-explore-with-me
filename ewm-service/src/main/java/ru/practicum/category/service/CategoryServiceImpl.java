@@ -9,10 +9,10 @@ import ru.practicum.category.dto.CategoryDto;
 import ru.practicum.category.dto.CategoryMapper;
 import ru.practicum.category.dto.NewCategoryDto;
 import ru.practicum.category.model.Category;
-import ru.practicum.handler.NotAvailableException;
-import ru.practicum.util.Pagination;
 import ru.practicum.category.repository.CategoryRepository;
+import ru.practicum.handler.NotAvailableException;
 import ru.practicum.handler.NotFoundException;
+import ru.practicum.util.Pagination;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,6 +37,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public CategoryDto getCategoryById(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Category with id=" + id + " hasn't found"));

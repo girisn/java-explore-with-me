@@ -1,6 +1,9 @@
 package ru.practicum.events.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;

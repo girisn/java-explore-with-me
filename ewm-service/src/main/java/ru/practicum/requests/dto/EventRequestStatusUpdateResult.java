@@ -1,6 +1,9 @@
 package ru.practicum.requests.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import ru.practicum.events.dto.EventUpdatedDto;
 
 import java.util.List;

@@ -4,12 +4,12 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.practicum.requests.dto.EventRequestStatusUpdateRequest;
-import ru.practicum.requests.dto.EventRequestStatusUpdateResult;
 import ru.practicum.events.model.Event;
 import ru.practicum.events.repository.EventRepository;
-import ru.practicum.handler.ValidateException;
 import ru.practicum.handler.NotFoundException;
+import ru.practicum.handler.ValidateException;
+import ru.practicum.requests.dto.EventRequestStatusUpdateRequest;
+import ru.practicum.requests.dto.EventRequestStatusUpdateResult;
 import ru.practicum.requests.dto.ParticipationRequestDto;
 import ru.practicum.requests.dto.ParticipationRequestMapper;
 import ru.practicum.requests.model.ParticipationRequest;
@@ -22,11 +22,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-
-import static ru.practicum.util.enam.EventState.PUBLISHED;
-import static ru.practicum.util.enam.EventRequestStatus.*;
 import static ru.practicum.requests.dto.ParticipationRequestMapper.mapToNewParticipationRequest;
 import static ru.practicum.requests.dto.ParticipationRequestMapper.mapToParticipationRequestDto;
+import static ru.practicum.util.enam.EventRequestStatus.*;
+import static ru.practicum.util.enam.EventState.PUBLISHED;
 
 @Service
 @RequiredArgsConstructor
