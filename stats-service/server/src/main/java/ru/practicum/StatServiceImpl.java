@@ -7,8 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.dto.StatsHitDto;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.exeption.ValidationException;
-import ru.practicum.model.StatHit;
 import ru.practicum.model.StatsHitMapper;
+import ru.practicum.model.StatHit;
 
 import java.time.LocalDateTime;
 import java.util.List;
