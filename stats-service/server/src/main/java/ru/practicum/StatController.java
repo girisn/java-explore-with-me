@@ -2,7 +2,7 @@ package ru.practicum;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.PropertySource;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.dto.StatsHitDto;
@@ -13,16 +13,17 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+import static ru.practicum.dto.Constant.DATE_TIME_PATTERN;
+
 @RestController
 @RequiredArgsConstructor
 @Slf4j
-@PropertySource(value = "classpath:application.properties")
 public class StatController {
 
     private final StatService service;
 
     @PostMapping("/hit")
-    @ResponseStatus(value = HttpStatus.CREATED)
+    @ResponseStatus(HttpStatus.CREATED)
     public void saveStatsHit(@RequestBody @Valid StatsHitDto statsHitDto) {
         log.info("Save StatsHit {}", statsHitDto);
         service.saveStat(statsHitDto);
@@ -30,8 +31,8 @@ public class StatController {
 
     @GetMapping("/stats")
     public Collection<ViewStatsDto> getViewStats(
-            @RequestParam(value = "start") LocalDateTime start,
-            @RequestParam(value = "end") LocalDateTime end,
+            @RequestParam(value = "start") @DateTimeFormat(pattern = DATE_TIME_PATTERN) LocalDateTime start,
+            @RequestParam(value = "end") @DateTimeFormat(pattern = DATE_TIME_PATTERN) LocalDateTime end,
             @RequestParam(value = "uris", defaultValue = "") List<String> uris,
             @RequestParam(value = "unique", defaultValue = "false") Boolean unique
     ) {

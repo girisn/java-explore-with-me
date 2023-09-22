@@ -6,8 +6,9 @@ import lombok.ToString;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.format.annotation.DateTimeFormat;
 import ru.practicum.category.model.Category;
-import ru.practicum.users.model.User;
+import ru.practicum.locations.model.Location;
 import ru.practicum.util.enam.EventState;
+import ru.practicum.users.model.User;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -56,8 +57,8 @@ public class Event {
     @Column(name = "participant_limit", nullable = false)
     private Integer participantLimit;
 
-    @Column(name = "confirmed_requests")
-    private Integer confirmedRequests = 0;
+    @Transient
+    private Long confirmedRequests = 0L;
 
     @Column(name = "request_moderation", nullable = false)
     private Boolean requestModeration;

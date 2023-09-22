@@ -6,9 +6,9 @@ import lombok.Setter;
 import lombok.ToString;
 import org.hibernate.annotations.DynamicUpdate;
 import org.springframework.format.annotation.DateTimeFormat;
+import ru.practicum.util.enam.EventRequestStatus;
 import ru.practicum.events.model.Event;
 import ru.practicum.users.model.User;
-import ru.practicum.util.enam.EventRequestStatus;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
