@@ -8,44 +8,45 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import ru.practicum.comments.dto.CommentCountDto;
-import ru.practicum.comments.repository.CommentRepository;
-import ru.practicum.dto.ViewStatsDto;
-import ru.practicum.locations.model.Location;
-import ru.practicum.locations.repository.LocationRepository;
-import ru.practicum.requests.model.ParticipationRequest;
-import ru.practicum.requests.repository.RequestRepository;
-import ru.practicum.util.enam.EventRequestStatus;
-import ru.practicum.util.enam.EventState;
-import ru.practicum.util.enam.EventsSort;
-import ru.practicum.util.Pagination;
 import ru.practicum.StatsClient;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
-import ru.practicum.util.enam.EventStateAction;
+import ru.practicum.comments.dto.CommentCountDto;
+import ru.practicum.comments.repository.CommentRepository;
+import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.events.dto.*;
 import ru.practicum.events.model.Event;
 import ru.practicum.events.repository.EventRepository;
 import ru.practicum.handler.NotFoundException;
-import ru.practicum.handler.ValidateException;
 import ru.practicum.handler.ValidateDateException;
+import ru.practicum.handler.ValidateException;
+import ru.practicum.locations.model.Location;
+import ru.practicum.locations.repository.LocationRepository;
+import ru.practicum.requests.model.ParticipationRequest;
+import ru.practicum.requests.repository.RequestRepository;
 import ru.practicum.users.model.User;
 import ru.practicum.users.repository.UserRepository;
+import ru.practicum.util.Pagination;
+import ru.practicum.util.enam.EventRequestStatus;
+import ru.practicum.util.enam.EventState;
+import ru.practicum.util.enam.EventStateAction;
+import ru.practicum.util.enam.EventsSort;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static ru.practicum.events.dto.EventMapper.*;
-import static ru.practicum.events.dto.EventMapper.mapToEventFullDtoWithComments;
 import static ru.practicum.locations.dto.LocationMapper.mapToLocation;
-import static ru.practicum.util.enam.EventsSort.EVENT_DATE;
-import static ru.practicum.util.enam.EventsSort.VIEWS;
 import static ru.practicum.util.Constants.*;
 import static ru.practicum.util.enam.EventState.*;
+import static ru.practicum.util.enam.EventsSort.EVENT_DATE;
+import static ru.practicum.util.enam.EventsSort.VIEWS;
 
 @Service
 @Slf4j
