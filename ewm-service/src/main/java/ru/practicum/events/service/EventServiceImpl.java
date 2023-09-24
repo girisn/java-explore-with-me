@@ -11,34 +11,38 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.StatsClient;
 import ru.practicum.category.model.Category;
 import ru.practicum.category.repository.CategoryRepository;
+import ru.practicum.comments.dto.CommentCountDto;
+import ru.practicum.comments.repository.CommentRepository;
 import ru.practicum.dto.ViewStatsDto;
 import ru.practicum.events.dto.*;
 import ru.practicum.events.model.Event;
-import ru.practicum.events.model.Location;
 import ru.practicum.events.repository.EventRepository;
-import ru.practicum.events.repository.LocationRepository;
 import ru.practicum.handler.NotFoundException;
 import ru.practicum.handler.ValidateDateException;
 import ru.practicum.handler.ValidateException;
+import ru.practicum.locations.model.Location;
+import ru.practicum.locations.repository.LocationRepository;
+import ru.practicum.requests.model.ParticipationRequest;
+import ru.practicum.requests.repository.RequestRepository;
 import ru.practicum.users.model.User;
 import ru.practicum.users.repository.UserRepository;
 import ru.practicum.util.Pagination;
+import ru.practicum.util.enam.EventRequestStatus;
 import ru.practicum.util.enam.EventState;
 import ru.practicum.util.enam.EventStateAction;
 import ru.practicum.util.enam.EventsSort;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static ru.practicum.events.dto.EventMapper.mapToEventFullDto;
-import static ru.practicum.events.dto.EventMapper.mapToNewEvent;
-import static ru.practicum.events.dto.LocationMapper.mapToLocation;
+import static ru.practicum.events.dto.EventMapper.*;
+import static ru.practicum.locations.dto.LocationMapper.mapToLocation;
 import static ru.practicum.util.Constants.*;
 import static ru.practicum.util.enam.EventState.*;
 import static ru.practicum.util.enam.EventsSort.EVENT_DATE;
@@ -51,16 +55,16 @@ import static ru.practicum.util.enam.EventsSort.VIEWS;
 @PropertySource(value = {"classpath:application.properties"})
 public class EventServiceImpl implements EventService {
     @Value("${app}")
-    String app;
+    private String app;
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final CategoryRepository categoryRepository;
+    private final RequestRepository requestRepository;
     private final StatsClient statsClient;
     private final LocationRepository locationRepository;
+    private final CommentRepository commentRepository;
 
-
-    @Transactional(readOnly = true)
     @Override
     public List<EventFullDto> getAllEventsAdmin(List<Long> users,
                                                 List<EventState> states,
@@ -74,13 +78,11 @@ public class EventServiceImpl implements EventService {
         PageRequest pageable = new Pagination(from, size, Sort.unsorted());
         List<Event> events = eventRepository.findAllForAdmin(users, states, categories, getRangeStart(rangeStart),
                 pageable);
+        confirmedRequestForListEvent(events);
 
         log.info("Get all events in admin {}", events);
-        return events.stream()
-                .map(EventMapper::mapToEventFullDto)
-                .collect(Collectors.toList());
+        return getEventsFullDtoWithComments(events);
     }
-
 
     @Override
     public EventFullDto updateEventByIdAdmin(Long eventId, EventUpdatedDto eventUpdatedDto) {
@@ -88,8 +90,10 @@ public class EventServiceImpl implements EventService {
         updateEventAdmin(event, eventUpdatedDto);
         event = eventRepository.save(event);
         locationRepository.save(event.getLocation());
+
+        Long comments = getComments(eventId);
         log.info("Update event with id= {} in admin ", eventId);
-        return mapToEventFullDto(event);
+        return mapToEventFullDtoWithComments(event, comments);
     }
 
 
@@ -102,6 +106,7 @@ public class EventServiceImpl implements EventService {
         Location savedLocation = locationRepository
                 .save(mapToLocation(newEventDto.getLocation()));
         Event event = eventRepository.save(mapToNewEvent(newEventDto, savedLocation, user, category));
+        confirmedRequestsForOneEvent(event);
         log.info("User id= {} create event in admin", userId);
         return mapToEventFullDto(event);
     }
@@ -110,18 +115,21 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<EventShortDto> getAllEventsByUserIdPrivate(Long userId, int from, int size) {
         log.info("Get all events of user with id= {} in private", userId);
-        return eventRepository.findAllWithInitiatorByInitiatorId(userId, new Pagination(from, size,
-                        Sort.unsorted())).stream()
-                .map(EventMapper::mapToEventShortDto)
-                .collect(Collectors.toList());
+        List<Event> events = eventRepository.findAllWithInitiatorByInitiatorId(userId, new Pagination(from, size,
+                Sort.unsorted()));
+        confirmedRequestForListEvent(events);
+        return getEventShortDtoWithComments(events);
+
     }
 
     @Transactional(readOnly = true)
     @Override
     public EventFullDto getEventByIdPrivate(Long userId, Long eventId) {
         Event event = getEventByIdAndInitiatorId(eventId, userId);
+        confirmedRequestsForOneEvent(event);
+        Long comments = getComments(eventId);
         log.info("Get event with id={} of user with id= {} in private", eventId, userId);
-        return mapToEventFullDto(event);
+        return mapToEventFullDtoWithComments(event, comments);
     }
 
     @Override
@@ -133,11 +141,11 @@ public class EventServiceImpl implements EventService {
         updateEvent(event, eventUpdatedDto);
         Event eventSaved = eventRepository.save(event);
         locationRepository.save(eventSaved.getLocation());
+        Long comments = getComments(eventId);
         log.info("Update event with id={} of user with id= {} in private", eventId, userId);
-        return mapToEventFullDto(eventSaved);
+        return mapToEventFullDtoWithComments(eventSaved, comments);
     }
 
-    @Transactional(readOnly = true)
     public List<EventShortDto> getEventsPublic(String text,
                                                List<Long> categories,
                                                Boolean paid,
@@ -172,11 +180,12 @@ public class EventServiceImpl implements EventService {
             events = getEventsBeforeRangeEnd(events, rangeEnd);
         }
 
+        confirmedRequestForListEvent(events);
         List<EventShortDto> result = events.stream()
                 .map(EventMapper::mapToEventShortDto)
                 .collect(Collectors.toList());
 
-        saveViewInEvent(result);
+        saveViewInEvent(result, rangeStart);
         statsClient.saveStats(app, request.getRequestURI(), request.getRemoteAddr(), LocalDateTime.now());
 
         if (sort.equals(VIEWS)) {
@@ -184,17 +193,20 @@ public class EventServiceImpl implements EventService {
                     .sorted(Comparator.comparingLong(EventShortDto::getViews))
                     .collect(Collectors.toList());
         }
-        log.info("Get all  event with text {}, category {}", text, categories);
+
+        log.info("Get all event with text {}, category {}", text, categories);
         return result;
     }
 
     @Override
     public EventFullDto getEventByIdPublic(Long id, HttpServletRequest request) {
         Event event = getEventById(id);
+        confirmedRequestsForOneEvent(event);
         if (!event.getState().equals(PUBLISHED)) {
             throw new NotFoundException("Event with id=" + id + " hasn't not published");
         }
-        EventFullDto fullDto = mapToEventFullDto(event);
+        Long comments = getComments(id);
+        EventFullDto fullDto = mapToEventFullDtoWithComments(event, comments);
 
         List<String> uris = List.of("/events/" + event.getId());
         List<ViewStatsDto> views = statsClient.getStats(START_DATE, END_DATE, uris, null).getBody();
@@ -208,6 +220,40 @@ public class EventServiceImpl implements EventService {
         return fullDto;
     }
 
+    private Long getComments(Long eventId) {
+        return commentRepository.countCommentByEventId(eventId);
+    }
+
+    private List<EventFullDto> getEventsFullDtoWithComments(List<Event> events) {
+        Map<Long, Event> eventsMap = events.stream()
+                .collect(Collectors.toMap(Event::getId, Function.identity()
+                ));
+        Set<Long> eventIds = eventsMap.keySet();
+        Map<Long, Long> commentCounts = commentRepository.findCommentCountByEventIdList(eventIds).stream()
+                .collect(Collectors.toMap(CommentCountDto::getEventId, CommentCountDto::getCount));
+
+        return eventsMap.values().stream()
+                .map(event -> {
+                    long commentCount = commentCounts.getOrDefault(event.getId(), 0L);
+                    return mapToEventFullDtoWithComments(event, commentCount);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<EventShortDto> getEventShortDtoWithComments(List<Event> events) {
+        Map<Long, Event> eventsMap = events.stream()
+                .collect(Collectors.toMap(Event::getId, Function.identity()));
+        Set<Long> eventIds = eventsMap.keySet();
+        Map<Long, Long> commentCounts = commentRepository.findCommentCountByEventIdList(eventIds).stream()
+                .collect(Collectors.toMap(CommentCountDto::getEventId, CommentCountDto::getCount));
+
+        return eventsMap.values().stream()
+                .map(event -> {
+                    long commentCount = commentCounts.getOrDefault(event.getId(), 0L);
+                    return mapToEventShortDtoWithComments(event, commentCount);
+                })
+                .collect(Collectors.toList());
+    }
 
     private Category getCategoryForEvent(Long id) {
         return categoryRepository.findById(id)
@@ -309,20 +355,14 @@ public class EventServiceImpl implements EventService {
         return Long.valueOf(uri[uri.length - 1]);
     }
 
-    private void saveViewInEvent(List<EventShortDto> result) {
+    private void saveViewInEvent(List<EventShortDto> result, LocalDateTime rangeStart) {
         List<String> uris = result.stream()
                 .map(eventShortDto -> "/events/" + eventShortDto.getId())
                 .collect(Collectors.toList());
 
-        List<Long> eventIds = result.stream()
-                .map(EventShortDto::getId)
-                .collect(Collectors.toList());
-
-        Optional<LocalDateTime> start = eventRepository.getStart(eventIds);
-
-        if (start.isPresent()) {
+        if (rangeStart != null) {
             List<ViewStatsDto> views = statsClient.getStats(
-                    start.get().format(DateTimeFormatter.ofPattern(DATE_DEFAULT)), LocalDateTime.now().format(DateTimeFormatter.ofPattern(DATE_DEFAULT)),
+                    rangeStart.format(START_DATE_FORMATTER), LocalDateTime.now().format(START_DATE_FORMATTER),
                     uris, true).getBody();
 
             if (views != null) {
@@ -356,5 +396,20 @@ public class EventServiceImpl implements EventService {
         return events.stream().filter(event -> event.getEventDate().isBefore(rangeEnd)).collect(Collectors.toList());
     }
 
+    public void confirmedRequestsForOneEvent(Event event) {
+        event.setConfirmedRequests(requestRepository
+                .countRequestByEventIdAndStatus(event.getId(), EventRequestStatus.CONFIRMED));
+    }
+
+    public void confirmedRequestForListEvent(List<Event> events) {
+        Map<Event, Long> requestsPerEvent = requestRepository.findAllByEventInAndStatus(events, EventRequestStatus.CONFIRMED)
+                .stream()
+                .collect(Collectors.groupingBy(ParticipationRequest::getEvent, Collectors.counting()));
+        if (!requestsPerEvent.isEmpty()) {
+            for (Event event : events) {
+                event.setConfirmedRequests(requestsPerEvent.getOrDefault(event, 0L));
+            }
+        }
+    }
 
 }

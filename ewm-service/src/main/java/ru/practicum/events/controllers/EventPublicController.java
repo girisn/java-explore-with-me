@@ -51,7 +51,6 @@ public class EventPublicController {
     ) {
         EventsSort sortParam = EventsSort.from(sort).orElseThrow(() -> new ValidationException("Sort isn't valid: "
                 + sort));
-
         return eventService.getEventsPublic(text, categories, paid, rangeStart, rangeEnd, onlyAvailable,
                 sortParam, from, size, request);
     }

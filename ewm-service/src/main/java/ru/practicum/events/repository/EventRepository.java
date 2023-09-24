@@ -46,7 +46,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                     "JOIN FETCH e.initiator i " +
                     "JOIN FETCH e.category c " +
                     "WHERE e.state = :state " +
-                    "AND (e.participantLimit = 0 OR e.participantLimit > e.confirmedRequests) " +
                     "AND (e.category.id IN :categories OR :categories IS NULL) " +
                     "AND e.eventDate > :rangeStart " +
                     "AND (e.paid = :paid OR :paid IS NULL) " +
@@ -63,7 +62,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
             "JOIN FETCH e.initiator " +
             "JOIN FETCH e.category " +
             "WHERE e.state = :state " +
-            "AND (e.participantLimit = 0 OR e.participantLimit > e.confirmedRequests) " +
             "AND (e.category.id IN :categories OR :categories IS NULL) " +
             "AND e.eventDate > :rangeStart " +
             "AND (:paid IS NULL OR e.paid = :paid) " +
